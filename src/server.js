@@ -1,44 +1,33 @@
 import Hapi from '@hapi/hapi';
 import routes from './routes';
+import { db } from './database';
+
+let server;
 
 const start = async () => {
-  /**
-   * Creating a server
-   */
-  const server = Hapi.server({
+  server = Hapi.server({
     port: 8000,
     host: 'localhost',
   });
 
-  /**
-   * Registering routes
-   */
   routes.forEach((route) => server.route(route));
 
-  /*   server.route({
-    method: 'POST',
-    path: '/hello',
-    handler: (req, h) => {
-      // const payload = req.payload;
-      const { payload } = req;
-      const { name } = payload;
-      return `Hello ${name}!`;
-    },
-  }); */
-
-  /**
-   * Starting the server
-   */
+  db.connect();
   await server.start();
-  console.log(`Server is listening on: ${server.info.uri}`);
+  console.log(`Server is listening on ${server.info.uri}`);
 };
 
-/**
- * Handling unhandled rejections
- */
 process.on('unhandledRejection', (err) => {
   console.log(err);
   process.exit(1);
+});
+
+process.on('SIGINT', async () => {
+  console.log('Stopping server...');
+  await server.stop({ timeout: 10000 });
+  db.end();
+  console.log('Server stopped');
+  process.exit(0);
 });
 
 start();
